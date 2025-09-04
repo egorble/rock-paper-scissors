@@ -1,0 +1,368 @@
+# Rock Paper Scissors Cross-Chain Game
+
+A cross-chain Rock Paper Scissors game built on Linera blockchain (v0.15.0) with centralized leaderboard and distributed gameplay.
+
+## Overview
+
+This smart contract implements a Rock Paper Scissors game where:
+- **Leaderboard Chain**: The only chain allowed to create game rooms and manage the global leaderboard
+- **Player Chains**: Can join existing rooms and submit moves via cross-chain messages
+- **Best of 3**: Each game consists of up to 3 rounds, first to win 2 rounds wins the game
+- **Global Statistics**: All game results are tracked on the leaderboard chain
+
+## Architecture
+
+### Core Components
+
+1. **Game Rooms**: Created only on the leaderboard chain, store game state
+2. **Cross-Chain Messages**: Enable communication between player chains and leaderboard
+3. **Leaderboard System**: Tracks wins, losses, and statistics for all players
+4. **Player Statistics**: Personal game history and performance metrics
+
+### Data Structures
+
+```rust
+// Game choices
+enum Choice {
+    Rock,
+    Paper,
+    Scissors,
+}
+
+// Game room structure
+struct GameRoom {
+    room_id: String,
+    player1: Option<ChainId>,
+    player2: Option<ChainId>,
+    player1_choice: Option<Choice>,
+    player2_choice: Option<Choice>,
+    game_result: GameResult,
+    created_at: u64,
+    round_number: u8,
+}
+
+// Leaderboard entry
+struct LeaderboardEntry {
+    chain_id: ChainId,
+    wins: u64,
+    losses: u64,
+    total_games: u64,
+}
+```
+
+## Operations
+
+### Setup Operations
+
+#### SetupLeaderboard
+Configures which chain serves as the leaderboard chain.
+```rust
+Operation::SetupLeaderboard {
+    leaderboard_chain_id: ChainId,
+}
+```
+
+### Game Operations
+
+#### CreateRoom (Leaderboard Chain Only)
+Creates a new game room waiting for players.
+```rust
+Operation::CreateRoom
+```
+
+#### JoinRoom (Any Chain)
+Joins an existing game room.
+```rust
+Operation::JoinRoom {
+    room_id: String,
+}
+```
+
+#### SubmitChoice (Any Chain)
+Submits a move for the current round.
+```rust
+Operation::SubmitChoice {
+    room_id: String,
+    choice: Choice,
+}
+```
+
+### Query Operations
+
+#### GetAvailableRooms
+Returns rooms waiting for players.
+
+#### GetRoom
+Returns details of a specific room.
+```rust
+Operation::GetRoom {
+    room_id: String,
+}
+```
+
+#### GetLeaderboard
+Returns the global leaderboard.
+
+#### GetMyStats
+Returns personal game statistics.
+
+### Admin Operations
+
+#### ResetLeaderboard (Leaderboard Chain Only)
+Resets all game data and statistics.
+```rust
+Operation::ResetLeaderboard
+```
+
+## Cross-Chain Messages
+
+### JoinRoom Message
+Sent from player chain to leaderboard chain to join a room.
+```rust
+GameMessage::JoinRoom {
+    room_id: String,
+    player_chain: ChainId,
+}
+```
+
+### PlayerJoined Message
+Confirmation sent back to player chain.
+```rust
+GameMessage::PlayerJoined {
+    room_id: String,
+    player_chain: ChainId,
+    success: bool,
+}
+```
+
+### SubmitChoice Message
+Sent from player chain to leaderboard chain with move.
+```rust
+GameMessage::SubmitChoice {
+    room_id: String,
+    player_chain: ChainId,
+    choice: Choice,
+}
+```
+
+### RoundCompleted Message
+Sent to both players after each round.
+```rust
+GameMessage::RoundCompleted {
+    room_id: String,
+    player1_choice: Choice,
+    player2_choice: Choice,
+    round_winner: Option<ChainId>,
+    round_result: RoundResult,
+    game_result: GameResult,
+}
+```
+
+### GameFinished Message
+Sent when a player reaches 2 wins.
+```rust
+GameMessage::GameFinished {
+    room_id: String,
+    winner: ChainId,
+    final_result: GameResult,
+}
+```
+
+## Game Flow
+
+### 1. Setup Phase
+```bash
+# On the designated leaderboard chain
+linera project run-operation setup-leaderboard --leaderboard-chain-id <CHAIN_ID>
+```
+
+### 2. Room Creation
+```bash
+# Only on leaderboard chain
+linera project run-operation create-room
+```
+
+### 3. Joining a Game
+```bash
+# On any player chain
+linera project run-operation join-room --room-id "room_0"
+```
+
+### 4. Playing Rounds
+```bash
+# Each player submits their choice
+linera project run-operation submit-choice --room-id "room_0" --choice Rock
+linera project run-operation submit-choice --room-id "room_0" --choice Paper
+```
+
+### 5. Game Completion
+- When both players submit choices, the round is calculated
+- Results are sent to both players
+- Game continues until one player wins 2 rounds
+- Statistics are updated on the leaderboard chain
+
+## GraphQL Queries
+
+### Available Rooms
+```graphql
+query {
+  availableRooms {
+    roomId
+    player1
+    player2
+    createdAt
+    roundNumber
+  }
+}
+```
+
+### Global Leaderboard
+```graphql
+query {
+  globalLeaderboard {
+    chainId
+    wins
+    losses
+    totalGames
+    winRate
+  }
+}
+```
+
+### Personal Statistics
+```graphql
+query {
+  myStats {
+    chainId
+    gamesPlayed
+    gamesWon
+    gamesLost
+    currentStreak
+    bestStreak
+    winRate
+  }
+}
+```
+
+### Game Statistics
+```graphql
+query {
+  gameStats {
+    totalRooms
+    activeRooms
+    finishedGames
+    totalPlayers
+  }
+}
+```
+
+## Building and Deployment
+
+### Prerequisites
+- Rust 1.75+
+- Linera SDK 0.15.0
+- linera-sdk dependencies
+
+### Build
+```bash
+cargo build --release --target wasm32-unknown-unknown
+```
+
+### Deploy
+```bash
+# Publish the application
+linera project publish-and-create
+
+# Setup leaderboard chain (run on designated leaderboard chain)
+linera project run-operation setup-leaderboard --leaderboard-chain-id <LEADERBOARD_CHAIN_ID>
+```
+
+## Security Considerations
+
+1. **Leaderboard Authority**: Only the designated leaderboard chain can create rooms and manage global state
+2. **Player Validation**: Players can only join rooms they're not already in
+3. **Move Validation**: Players can only submit moves for rooms they're participating in
+4. **Game Integrity**: Round results are calculated deterministically on the leaderboard chain
+5. **Statistics Integrity**: All statistics are managed centrally to prevent manipulation
+
+## Error Handling
+
+- **Room Not Found**: Graceful handling when trying to join non-existent rooms
+- **Room Full**: Prevents joining rooms that already have 2 players
+- **Invalid Moves**: Rejects moves from players not in the specified room
+- **Bouncing Messages**: Proper handling of failed cross-chain messages
+- **Configuration Errors**: Clear error messages for setup issues
+
+## Best Practices
+
+1. **Setup First**: Always configure the leaderboard chain before creating rooms
+2. **Room Management**: Create rooms only on the leaderboard chain
+3. **Cross-Chain Communication**: Handle message failures gracefully
+4. **State Consistency**: Let the leaderboard chain be the source of truth
+5. **Resource Management**: Clean up finished games to prevent state bloat
+
+## Example Usage
+
+### Complete Game Session
+```bash
+# 1. Setup (on leaderboard chain)
+linera project run-operation setup-leaderboard --leaderboard-chain-id e476187f6ddfeb9d588c7b45d3df334d5501d6499b3f9ad5595cae86cce16a65
+
+# 2. Create room (on leaderboard chain)
+linera project run-operation create-room
+
+# 3. Player 1 joins (on player 1 chain)
+linera project run-operation join-room --room-id "room_0"
+
+# 4. Player 2 joins (on player 2 chain)
+linera project run-operation join-room --room-id "room_0"
+
+# 5. Round 1 - Player 1 plays Rock
+linera project run-operation submit-choice --room-id "room_0" --choice Rock
+
+# 6. Round 1 - Player 2 plays Paper
+linera project run-operation submit-choice --room-id "room_0" --choice Paper
+# Result: Player 2 wins round 1
+
+# 7. Round 2 - Player 1 plays Scissors
+linera project run-operation submit-choice --room-id "room_0" --choice Scissors
+
+# 8. Round 2 - Player 2 plays Rock
+linera project run-operation submit-choice --room-id "room_0" --choice Rock
+# Result: Player 2 wins round 2 and the game (2-0)
+```
+
+## Troubleshooting
+
+### Common Issues
+
+1. **"Leaderboard not configured"**
+   - Run `SetupLeaderboard` operation first
+   - Ensure you're using the correct chain ID
+
+2. **"Rooms can only be created on leaderboard chain"**
+   - Switch to the designated leaderboard chain
+   - Verify the chain is properly configured
+
+3. **"Room not found"**
+   - Check if the room ID exists
+   - Ensure the room hasn't been cleaned up after completion
+
+4. **"Cannot join room"**
+   - Room might be full (2 players max)
+   - You might already be in the room
+   - Game might be finished
+
+### Debug Information
+
+The contract includes extensive logging. Check the console output for:
+- `[SETUP]` - Configuration messages
+- `[CREATE_ROOM]` - Room creation
+- `[JOIN_ROOM]` - Join requests
+- `[MESSAGE]` - Cross-chain message processing
+- `[LEADERBOARD]` - Statistics updates
+
+## License
+
+Copyright (c) Zefchain Labs, Inc.
+SPDX-License-Identifier: Apache-2.0

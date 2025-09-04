@@ -1,0 +1,29 @@
+
+
+# Ignore Danny Game directories
+/danny-game/
+
+# Standard Rust ignores for the game directory
+target/
+**/*.rs.bk
+Cargo.lock
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
