@@ -121,6 +121,8 @@ const LineraContextProvider = ({ children }) => {
       gameResult: roomState.gameResult || null // Include gameResult for checking if game is finished
     };
 
+    console.log("Converted room:", convertedRoom);
+    
     // Set up players
     if (roomState.player1) {
       // Preserve existing score if available, otherwise use gameResult
@@ -157,6 +159,7 @@ const LineraContextProvider = ({ children }) => {
     }
 
     setRoom(convertedRoom);
+    console.log("Final room state:", convertedRoom);
 
     // The game end navigation is now handled in the Room component to ensure animations complete first
     // Check for game end condition (first to 3 wins) is done in Room component

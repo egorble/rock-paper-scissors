@@ -205,6 +205,10 @@ const Room = () => {
     
     // Create a deep copy of the current room state
     const updatedRoom = JSON.parse(JSON.stringify(room));
+    
+    // Preserve player names when updating room state
+    updatedRoom.player1Name = room.player1Name;
+    updatedRoom.player2Name = room.player2Name;
   
     // Get player IDs from the room object
     const player1Id = room.player1;

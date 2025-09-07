@@ -71,27 +71,32 @@ const PlayerTwo = ({ result }) => {
 
   // Get opponent name
   const getOpponentName = () => {
-    // Find the opponent (the other player that's not the current player)
-    let opponentId = null;
-    let opponentName = null;
-    
+    // PlayerTwo should always show the opponent's name
     // The opponent is the player who is NOT the current player
+    if (room.player1 && room.player1 !== playerChainId && room.player1Name) {
+      console.log("PlayerTwo (opponent) name:", room.player1Name);
+      return room.player1Name;
+    } else if (room.player2 && room.player2 !== playerChainId && room.player2Name) {
+      console.log("PlayerTwo (opponent) name:", room.player2Name);
+      return room.player2Name;
+    }
+    
+    // Fallback to shortened chain ID if name is not available
+    // Find the opponent ID
+    let opponentId = null;
     if (room.player1 && room.player1 !== playerChainId) {
       opponentId = room.player1;
-      opponentName = room.player1Name;
     } else if (room.player2 && room.player2 !== playerChainId) {
       opponentId = room.player2;
-      opponentName = room.player2Name;
     }
     
-    if (opponentName) {
-      return opponentName;
-    }
-    // Fallback to shortened chain ID if name is not available
     if (opponentId) {
-      return `${opponentId.substring(0, 8)}...`;
+      const name = `${opponentId.substring(0, 8)}...`;
+      console.log("PlayerTwo (opponent) fallback name:", name);
+      return name;
     }
-    return "Player 2";
+    console.log("PlayerTwo (opponent) default name: Opponent");
+    return "Opponent";
   };
 
   return (

@@ -11,13 +11,22 @@ const PlayerOne = ({ result }) => {
   const [option, setOption] = useState("rock");
   const [score, setScore] = useState(0);
   const rockHand = useRef();
-  const { room, playerChainId } = useContext(LineraContext); // Use playerChainId instead of player_1
+  const { room, playerChainId } = useContext(LineraContext);
 
   useEffect(() => {
-    // PlayerOne should always show the current player's hand (playerChainId)
-    if (result.show && room.players && playerChainId && room.players[playerChainId]) {
-      const newOption = room.players[playerChainId].option || "rock";
-      const newScore = room.players[playerChainId].score || 0;
+    // PlayerOne should always show the current player's hand
+    let currentPlayerId = null;
+    
+    // Find the current player ID
+    if (room.player1 === playerChainId) {
+      currentPlayerId = room.player1;
+    } else if (room.player2 === playerChainId) {
+      currentPlayerId = room.player2;
+    }
+    
+    if (result.show && room.players && currentPlayerId && room.players[currentPlayerId]) {
+      const newOption = room.players[currentPlayerId].option || "rock";
+      const newScore = room.players[currentPlayerId].score || 0;
       setOption(newOption);
       setScore(newScore);
       if (rockHand.current) {
@@ -31,30 +40,45 @@ const PlayerOne = ({ result }) => {
         rockHand.current.style.transform = `rotate(${result.rotate}deg)`;
       }
     }
-  }, [result, room.players, playerChainId]);
+  }, [result, room.players, playerChainId, room.player1, room.player2]);
 
   // Update score when room state changes
   useEffect(() => {
-    if (room.players && playerChainId && room.players[playerChainId]) {
-      const newScore = room.players[playerChainId].score || 0;
+    // PlayerOne should always show the current player's score
+    let currentPlayerId = null;
+    
+    // Find the current player ID
+    if (room.player1 === playerChainId) {
+      currentPlayerId = room.player1;
+    } else if (room.player2 === playerChainId) {
+      currentPlayerId = room.player2;
+    }
+    
+    if (currentPlayerId && room.players && room.players[currentPlayerId]) {
+      const newScore = room.players[currentPlayerId].score || 0;
       setScore(newScore);
     }
-  }, [room.players, playerChainId]);
+  }, [room.players, playerChainId, room.player1, room.player2]);
 
   // Get player name
   const getPlayerName = () => {
-    // Check if the current player is player1 or player2 and return the appropriate name
+    // PlayerOne should always show the current player's name
     if (room.player1 === playerChainId && room.player1Name) {
+      console.log("PlayerOne (current player) name:", room.player1Name);
       return room.player1Name;
     } else if (room.player2 === playerChainId && room.player2Name) {
+      console.log("PlayerOne (current player) name:", room.player2Name);
       return room.player2Name;
     }
     
     // Fallback to shortened chain ID if name is not available
     if (playerChainId) {
-      return `${playerChainId.substring(0, 8)}...`;
+      const name = `${playerChainId.substring(0, 8)}...`;
+      console.log("PlayerOne (current player) fallback name:", name);
+      return name;
     }
-    return "Player 1";
+    console.log("PlayerOne (current player) default name: You");
+    return "You";
   };
 
   return (
