@@ -35,7 +35,7 @@ pub enum RoundResult {
     Draw,
 }
 
-// Overall game result (best of 3)
+// Overall game result (best of 5)
 #[derive(Debug, Clone, Serialize, Deserialize, async_graphql::SimpleObject)]
 pub struct GameResult {
     pub player1_wins: u8,
@@ -55,7 +55,8 @@ pub struct GameRoom {
     pub player2_choice: Option<Choice>,
     pub game_result: GameResult,
     pub created_at: u64,
-    pub round_number: u8, // Current round (1-3)
+    pub round_number: u8, // Current round (1-5)
+    pub private: bool, // Whether the room is private or public
 }
 
 // Leaderboard entry structure
@@ -123,7 +124,10 @@ pub enum Operation {
     },
     
     // Game operations (only allowed on leaderboard chain)
-    CreateRoom,
+    CreateRoom {
+        room_id: String,
+        private: bool,
+    },
     
     // Player operations (allowed on any chain)
     JoinRoom {
@@ -170,7 +174,7 @@ impl Choice {
 }
 
 impl GameRoom {
-    pub fn new(room_id: String, timestamp: u64) -> Self {
+    pub fn new(room_id: String, timestamp: u64, private: bool) -> Self {
         Self {
             room_id,
             player1: None,
@@ -186,6 +190,7 @@ impl GameRoom {
             },
             created_at: timestamp,
             round_number: 1,
+            private,
         }
     }
     
@@ -252,14 +257,14 @@ impl GameRoom {
             match result {
                 RoundResult::Win => {
                     self.game_result.player1_wins += 1;
-                    if self.game_result.player1_wins >= 2 {
+                    if self.game_result.player1_wins >= 3 {
                         self.game_result.winner = self.player1;
                         self.game_result.is_finished = true;
                     }
                 }
                 RoundResult::Lose => {
                     self.game_result.player2_wins += 1;
-                    if self.game_result.player2_wins >= 2 {
+                    if self.game_result.player2_wins >= 3 {
                         self.game_result.winner = self.player2;
                         self.game_result.is_finished = true;
                     }

@@ -7,7 +7,7 @@ A cross-chain Rock Paper Scissors game built on Linera blockchain (v0.15.0) with
 This smart contract implements a Rock Paper Scissors game where:
 - **Leaderboard Chain**: The only chain allowed to create game rooms and manage the global leaderboard
 - **Player Chains**: Can join existing rooms and submit moves via cross-chain messages
-- **Best of 3**: Each game consists of up to 3 rounds, first to win 2 rounds wins the game
+- **Best of 5**: Each game consists of up to 5 rounds, first to win 3 rounds wins the game
 - **Global Statistics**: All game results are tracked on the leaderboard chain
 
 ## Architecture
@@ -329,7 +329,14 @@ linera project run-operation submit-choice --room-id "room_0" --choice Scissors
 
 # 8. Round 2 - Player 2 plays Rock
 linera project run-operation submit-choice --room-id "room_0" --choice Rock
-# Result: Player 2 wins round 2 and the game (2-0)
+# Result: Player 2 wins round 2 (2-0)
+
+# 9. Round 3 - Player 1 plays Paper
+linera project run-operation submit-choice --room-id "room_0" --choice Paper
+
+# 10. Round 3 - Player 2 plays Scissors
+linera project run-operation submit-choice --room-id "room_0" --choice Scissors
+# Result: Player 2 wins round 3 and the game (3-0)
 ```
 
 ## Troubleshooting

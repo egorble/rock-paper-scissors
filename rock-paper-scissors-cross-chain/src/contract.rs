@@ -91,28 +91,31 @@ impl Contract for RockPaperScissorsContract {
                 }
             }
             
-            Operation::CreateRoom => {
+            Operation::CreateRoom { room_id, private } => {
                 let current_chain = self.runtime.chain_id();
-                eprintln!("[CREATE_ROOM] CreateRoom called on chain {:?}", current_chain);
+                eprintln!("[CREATE_ROOM] CreateRoom called on chain {:?} with room_id: '{}', private: {}", current_chain, room_id, private);
                 
                 // Only allow room creation on leaderboard chain
                 if !*self.state.is_leaderboard_chain.get() {
                     panic!("Rooms can only be created on the leaderboard chain");
                 }
                 
-                let room_counter = *self.state.room_counter.get();
-                let room_id = format!("room_{}", room_counter);
-                self.state.room_counter.set(room_counter + 1);
+                // Check if room with this ID already exists
+                if let Ok(Some(_)) = self.state.rooms.get(&room_id).await {
+                    panic!("Room with ID '{}' already exists", room_id);
+                }
                 
                 let timestamp = self.runtime.system_time().micros();
-                let room = GameRoom::new(room_id.clone(), timestamp);
+                let room = GameRoom::new(room_id.clone(), timestamp, private);
                 
                 let _ = self.state.rooms.insert(&room_id, room);
                 
-                // Add to available rooms list
-                let mut available_rooms = self.state.available_rooms.get().clone();
-                available_rooms.push(room_id.clone());
-                self.state.available_rooms.set(available_rooms);
+                // Add to available rooms list (only if not private)
+                if !private {
+                    let mut available_rooms = self.state.available_rooms.get().clone();
+                    available_rooms.push(room_id.clone());
+                    self.state.available_rooms.set(available_rooms);
+                }
                 
                 eprintln!("[CREATE_ROOM] Created room {} on leaderboard chain", room_id);
             }

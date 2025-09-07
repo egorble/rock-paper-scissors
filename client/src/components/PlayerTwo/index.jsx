@@ -1,5 +1,5 @@
 import { useRef, useState, useEffect, useContext } from "react";
-import { SocketContext } from "../../context/SocketContext";
+import { LineraContext } from "../../context/SocketContext";
 import JoinLink from "../JoinLink";
 import PersonIcon from "@mui/icons-material/Person";
 import StarIcon from "@mui/icons-material/Star";
@@ -12,29 +12,72 @@ const PlayerTwo = ({ result }) => {
   const [option, setOption] = useState("rock");
   const [score, setScore] = useState(0);
   const rockHand = useRef();
-  const { room, player_2 } = useContext(SocketContext);
+  const { room, playerChainId } = useContext(LineraContext);
 
   useEffect(() => {
-    if (result.show) {
-      setOption(room.players[player_2].option);
-      setScore(room.players[player_2].score);
-      rockHand.current.style.transform = `rotate(${result.rotate}deg)`;
+    // PlayerTwo should always show the opponent's hand
+    let opponentId = null;
+    
+    console.log("PlayerTwo - room:", room);
+    console.log("PlayerTwo - playerChainId:", playerChainId);
+    
+    // Find the opponent (the other player that's not the current player)
+    if (room.player1 && room.player1 !== playerChainId) {
+      opponentId = room.player1;
+    } else if (room.player2 && room.player2 !== playerChainId) {
+      opponentId = room.player2;
+    }
+    
+    console.log("PlayerTwo - opponentId:", opponentId);
+    
+    if (result.show && room.players && opponentId && room.players[opponentId]) {
+      const newOption = room.players[opponentId].option || "rock";
+      const newScore = room.players[opponentId].score || 0;
+      console.log("PlayerTwo - updating option to:", newOption);
+      console.log("PlayerTwo - updating score to:", newScore);
+      setOption(newOption);
+      setScore(newScore);
+      if (rockHand.current) {
+        rockHand.current.style.transform = `rotate(${result.rotate}deg)`;
+      }
     } else if (result.reset) {
+      // Only reset the option, not the score
+      console.log("PlayerTwo - resetting option");
       setOption("rock");
     } else {
-      if (rockHand.current)
+      if (rockHand.current) {
         rockHand.current.style.transform = `rotate(${result.rotate}deg)`;
+      }
     }
-  }, [result]);
+  }, [result, room.players, playerChainId, room.player1, room.player2]);
+
+  // Update score when room state changes
+  useEffect(() => {
+    // PlayerTwo should always show the opponent's hand
+    let opponentId = null;
+    
+    // Find the opponent (the other player that's not the current player)
+    if (room.player1 && room.player1 !== playerChainId) {
+      opponentId = room.player1;
+    } else if (room.player2 && room.player2 !== playerChainId) {
+      opponentId = room.player2;
+    }
+    
+    if (opponentId && room.players && room.players[opponentId]) {
+      const newScore = room.players[opponentId].score || 0;
+      setScore(newScore);
+    }
+  }, [room.players, playerChainId, room.player1, room.player2]);
 
   return (
     <div className={styles.container}>
-      {!player_2 && room.type === "friend" && (
+      {/* Only show join link for private rooms (when playing with friend) */}
+      {!room.player2 && room.id && room.private && (
         <JoinLink
-          link={`${process.env.REACT_APP_BASE_URL}room/${room.roomId}`}
+          link={`${window.location.origin}/room/${room.id}`}
         />
       )}
-      {!player_2 && (
+      {!room.player2 && (
         <div className={styles.opponent_container}>
           <div className={styles.opponent_card}>
             <PersonIcon />
@@ -44,7 +87,7 @@ const PlayerTwo = ({ result }) => {
           </p>
         </div>
       )}
-      {player_2 && (
+      {room.player2 && (
         <div className={styles.player_info}>
           <div className={styles.star_container}>
             {[...Array(3).keys()].map((ele, index) =>
@@ -63,7 +106,7 @@ const PlayerTwo = ({ result }) => {
           </div>
         </div>
       )}
-      {option === "rock" && player_2 && (
+      {option === "rock" && room.player2 && (
         <img
           src={rock_right_hand_img}
           alt="rock_right_hand_img"
@@ -71,14 +114,14 @@ const PlayerTwo = ({ result }) => {
           ref={rockHand}
         />
       )}
-      {option === "paper" && player_2 && (
+      {option === "paper" && room.player2 && (
         <img
           src={paper_right_hand_img}
           alt="paper_right_hand_img"
           className={styles.paper_right_hand_img}
         />
       )}
-      {option === "scissors" && player_2 && (
+      {option === "scissors" && room.player2 && (
         <img
           src={scissors_right_hand_img}
           alt="scissors_right_hand_img"

@@ -4,9 +4,13 @@ import styles from "./styles.module.css";
 const JoinLink = ({ link }) => {
   const [active, setActive] = useState(false);
 
+  // Extract room ID from the link
+  const roomId = link.split('/').pop();
+
   const handleChange = () => {
     setActive(true);
-    navigator.clipboard.writeText(link);
+    // Copy only the room ID to clipboard instead of the full link
+    navigator.clipboard.writeText(roomId);
   };
 
   return (
@@ -22,10 +26,10 @@ const JoinLink = ({ link }) => {
         }
         onClick={handleChange}
       >
-        {link}
+        Room ID: {roomId}
       </button>
       <h2 className={styles.join_link_text}>
-        Send this link to your friend to connect.
+        Send this room ID to your friend to connect.
       </h2>
     </div>
   );

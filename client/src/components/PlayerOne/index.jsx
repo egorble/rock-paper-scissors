@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, useContext } from "react";
-import { SocketContext } from "../../context/SocketContext";
+import { LineraContext } from "../../context/SocketContext";
 import PersonIcon from "@mui/icons-material/Person";
 import StarIcon from "@mui/icons-material/Star";
 import rock_left_hand_img from "../../images/rock_left_hand.png";
@@ -11,19 +11,35 @@ const PlayerOne = ({ result }) => {
   const [option, setOption] = useState("rock");
   const [score, setScore] = useState(0);
   const rockHand = useRef();
-  const { room, player_1 } = useContext(SocketContext);
+  const { room, playerChainId } = useContext(LineraContext); // Use playerChainId instead of player_1
 
   useEffect(() => {
-    if (result.show) {
-      setOption(room.players[player_1].option);
-      setScore(room.players[player_1].score);
-      rockHand.current.style.transform = `rotate(${result.rotate}deg)`;
+    // PlayerOne should always show the current player's hand (playerChainId)
+    if (result.show && room.players && playerChainId && room.players[playerChainId]) {
+      const newOption = room.players[playerChainId].option || "rock";
+      const newScore = room.players[playerChainId].score || 0;
+      setOption(newOption);
+      setScore(newScore);
+      if (rockHand.current) {
+        rockHand.current.style.transform = `rotate(${result.rotate}deg)`;
+      }
     } else if (result.reset) {
+      // Only reset the option, not the score
       setOption("rock");
     } else {
-      rockHand.current.style.transform = `rotate(${result.rotate}deg)`;
+      if (rockHand.current) {
+        rockHand.current.style.transform = `rotate(${result.rotate}deg)`;
+      }
     }
-  }, [result]);
+  }, [result, room.players, playerChainId]);
+
+  // Update score when room state changes
+  useEffect(() => {
+    if (room.players && playerChainId && room.players[playerChainId]) {
+      const newScore = room.players[playerChainId].score || 0;
+      setScore(newScore);
+    }
+  }, [room.players, playerChainId]);
 
   return (
     <div className={styles.container}>

@@ -126,6 +126,16 @@ impl QueryRoot {
         &self.available_rooms
     }
     
+    /// Get all public rooms (waiting for players)
+    async fn public_rooms(&self) -> Vec<&GameRoom> {
+        self.available_rooms.iter().filter(|room| !room.private).collect()
+    }
+    
+    /// Get all private rooms (waiting for players)
+    async fn private_rooms(&self) -> Vec<&GameRoom> {
+        self.available_rooms.iter().filter(|room| room.private).collect()
+    }
+    
     /// Get all rooms (including finished games)
     async fn all_rooms(&self) -> &Vec<GameRoom> {
         &self.all_rooms
@@ -227,9 +237,9 @@ impl MutationRoot {
     }
     
     /// Create a new room (only on leaderboard chain)
-    async fn create_room(&self) -> String {
-        self.runtime.schedule_operation(&rock_paper_scissors::Operation::CreateRoom);
-        "New game room created successfully".to_string()
+    async fn create_room(&self, room_id: String, private: bool) -> String {
+        self.runtime.schedule_operation(&rock_paper_scissors::Operation::CreateRoom { room_id: room_id.clone(), private });
+        format!("New {} game room '{}' created successfully", if private { "private" } else { "public" }, room_id)
     }
     
     /// Join an existing room
