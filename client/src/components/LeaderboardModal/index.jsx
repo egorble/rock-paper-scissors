@@ -1,5 +1,6 @@
 import { useState, useEffect, useContext, useRef } from "react";
 import { LineraContext } from "../../context/SocketContext";
+import * as XLSX from "xlsx";
 import styles from "./styles.module.css";
 
 const LeaderboardModal = ({ isOpen, onClose }) => {
@@ -11,8 +12,17 @@ const LeaderboardModal = ({ isOpen, onClose }) => {
 
   // Function to fetch leaderboard data
   const fetchLeaderboard = async () => {
-    if (!lineraClient || !isMounted.current) return;
+    console.log("fetchLeaderboard called");
+    console.log("lineraClient available:", !!lineraClient);
+    console.log("isMounted.current:", isMounted.current);
     
+    if (!lineraClient) {
+      console.log("Skipping fetch - lineraClient is false");
+      return;
+    }
+    
+    // Don't check isMounted here initially as it might not be set yet
+    console.log("Fetching leaderboard data...");
     setIsLoading(true);
     setError("");
     
@@ -24,52 +34,106 @@ const LeaderboardModal = ({ isOpen, onClose }) => {
             totalGames
             wins
             losses
+            playerName
           }
         }
       `;
       
+      console.log("Making GraphQL request to:", lineraClient.getReadChainEndpoint());
       const response = await lineraClient.makeGraphQLRequest(
         lineraClient.getReadChainEndpoint(),
         query
       );
       
+      console.log("Leaderboard response:", response);
+      
       if (response.errors) {
         throw new Error(response.errors[0].message);
       }
       
+      // Check if still mounted before updating state
       if (isMounted.current) {
         setLeaderboard(response.data.globalLeaderboard || []);
+        console.log("Leaderboard data set:", response.data.globalLeaderboard || []);
       }
     } catch (err) {
       console.error("Failed to fetch leaderboard:", err);
+      // Check if still mounted before updating state
       if (isMounted.current) {
         setError("Failed to fetch leaderboard: " + err.message);
       }
     } finally {
+      // Check if still mounted before updating state
       if (isMounted.current) {
         setIsLoading(false);
       }
     }
   };
 
+  // Export leaderboard to XLSX format
+  const exportToSheets = () => {
+    if (leaderboard.length === 0) return;
+    
+    // Prepare data for export
+    const sortedLeaderboard = [...leaderboard].sort((a, b) => 
+      b.wins - a.wins || a.losses - b.losses
+    );
+    
+    const exportData = sortedLeaderboard.map((player, index) => {
+      const winRate = player.totalGames > 0 
+        ? ((player.wins / player.totalGames) * 100).toFixed(1) 
+        : "0.0";
+      
+      return {
+        Rank: index + 1,
+        "Player Name": player.playerName || 'Unknown Player',
+        "Chain ID": player.chainId,
+        Games: player.totalGames,
+        Wins: player.wins,
+        Losses: player.losses,
+        "Win Rate": `${winRate}%`
+      };
+    });
+    
+    // Create worksheet
+    const worksheet = XLSX.utils.json_to_sheet(exportData);
+    
+    // Create workbook
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Leaderboard");
+    
+    // Export to file
+    XLSX.writeFile(workbook, "leaderboard.xlsx");
+  };
+
   // Fetch leaderboard when modal opens
   useEffect(() => {
+    console.log("Leaderboard modal isOpen changed:", isOpen);
+    console.log("lineraClient in useEffect:", !!lineraClient);
     if (isOpen) {
+      console.log("Modal is open, calling fetchLeaderboard");
       fetchLeaderboard();
+    } else {
+      console.log("Modal is closed, not fetching leaderboard");
     }
-  }, [isOpen]);
+  }, [isOpen, lineraClient]);
 
-  // Setup leaderboard monitoring
+  // Setup leaderboard monitoring for real-time updates
   useEffect(() => {
+    // Set mounted to true when component mounts
     isMounted.current = true;
+    console.log("Component mounted, isMounted set to true");
     
     if (isOpen && lineraClient) {
-      // Start monitoring for blockchain notifications
+      console.log("Setting up leaderboard monitoring...");
+      // Start monitoring for blockchain notifications (for real-time updates only)
       const setupMonitoring = async () => {
         try {
           await startLeaderboardMonitoring(() => {
             // When a blockchain notification is received, refresh the leaderboard
-            if (isMounted.current) {
+            // Only update if we're not currently loading to prevent conflicts
+            if (isMounted.current && !isLoading) {
+              console.log("Blockchain notification received, refreshing leaderboard...");
               fetchLeaderboard();
             }
           });
@@ -86,12 +150,13 @@ const LeaderboardModal = ({ isOpen, onClose }) => {
     
     // Cleanup function
     return () => {
+      console.log("Component unmounting, isMounted set to false");
       isMounted.current = false;
       if (isOpen) {
         stopLeaderboardMonitoring();
       }
     };
-  }, [isOpen, lineraClient]);
+  }, [isOpen, lineraClient, isLoading]);
 
   if (!isOpen) return null;
 
@@ -100,26 +165,30 @@ const LeaderboardModal = ({ isOpen, onClose }) => {
       <div className={styles.modalContent} onClick={(e) => e.stopPropagation()}>
         <h2 className={styles.modalTitle}>Global Leaderboard</h2>
         
-        <div className={styles.refreshContainer}>
+        {/* Export button */}
+        <div className={styles.exportContainer}>
           <button 
-            className={styles.refreshButton} 
-            onClick={fetchLeaderboard}
-            disabled={isLoading}
+            className={styles.exportButton} 
+            onClick={exportToSheets}
+            disabled={leaderboard.length === 0 || isLoading}
           >
-            {isLoading ? "Refreshing..." : "Refresh"}
+            Export to Excel
           </button>
         </div>
         
         {error && <div className={styles.error}>{error}</div>}
         
-        {isLoading && leaderboard.length === 0 ? (
+        {isLoading ? (
           <div className={styles.loading}>Loading leaderboard...</div>
+        ) : leaderboard.length === 0 ? (
+          <div className={styles.loading}>No leaderboard data available</div>
         ) : (
           <div className={styles.leaderboardContainer}>
             <table className={styles.leaderboardTable}>
               <thead>
                 <tr>
                   <th>Rank</th>
+                  <th>Player Name</th>
                   <th>Chain ID</th>
                   <th>Games</th>
                   <th>Wins</th>
@@ -138,6 +207,7 @@ const LeaderboardModal = ({ isOpen, onClose }) => {
                     return (
                       <tr key={player.chainId}>
                         <td>{index + 1}</td>
+                        <td>{player.playerName || 'Unknown Player'}</td>
                         <td className={styles.chainId}>
                           {player.chainId.substring(0, 8)}...
                         </td>

@@ -25,28 +25,9 @@ const LineraContextProvider = ({ children }) => {
     const client = new LineraGameClient();
     setLineraClient(client);
 
-    // Initialize player with openChain using READ_CHAIN_ID
-    const initializePlayer = async () => {
-      try {
-        console.log('Starting player initialization...');
-        // Call initializePlayer with READ_CHAIN_ID to initialize the chain
-        const newChainId = await client.initializePlayer();
-        console.log('Initialization result (new chain ID):', newChainId);
-        
-        // Use the actual player chain ID returned from openChain
-        console.log('Setting player chain ID:', newChainId);
-        
-        setPlayerChainId(newChainId);
-        // Don't set player_1 here - it will be set when joining a room
-        setIsInitialized(true);
-        console.log("Player chain initialized successfully:", newChainId);
-      } catch (error) {
-        console.error("Failed to initialize player chain:", error);
-        // Continue without initialization - some features may be limited
-      }
-    };
-
-    initializePlayer();
+    // Don't automatically initialize player chain
+    // Chain will be created when user registers
+    setIsInitialized(true);
   }, []); // Empty dependency array to run only once
 
   // Create room function
@@ -132,6 +113,8 @@ const LineraContextProvider = ({ children }) => {
       id: roomState.roomId,
       player1: roomState.player1, // Store player1 ID
       player2: roomState.player2, // Store player2 ID
+      player1Name: roomState.player1Name || null, // Store player1 name
+      player2Name: roomState.player2Name || null, // Store player2 name
       private: roomState.private || false, // Include private flag
       players: {},
       roundHistory: roomState.roundHistory || [],
@@ -279,7 +262,8 @@ const LineraContextProvider = ({ children }) => {
         resetRoom,
         startLeaderboardMonitoring, // Add leaderboard monitoring functions
         stopLeaderboardMonitoring,  // Add leaderboard monitoring functions
-        playerChainId
+        playerChainId,
+        setPlayerChainId // Expose setPlayerChainId to allow setting it from outside
       }}
     >
       {children}

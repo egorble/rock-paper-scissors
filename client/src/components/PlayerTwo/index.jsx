@@ -69,6 +69,31 @@ const PlayerTwo = ({ result }) => {
     }
   }, [room.players, playerChainId, room.player1, room.player2]);
 
+  // Get opponent name
+  const getOpponentName = () => {
+    // Find the opponent (the other player that's not the current player)
+    let opponentId = null;
+    let opponentName = null;
+    
+    // The opponent is the player who is NOT the current player
+    if (room.player1 && room.player1 !== playerChainId) {
+      opponentId = room.player1;
+      opponentName = room.player1Name;
+    } else if (room.player2 && room.player2 !== playerChainId) {
+      opponentId = room.player2;
+      opponentName = room.player2Name;
+    }
+    
+    if (opponentName) {
+      return opponentName;
+    }
+    // Fallback to shortened chain ID if name is not available
+    if (opponentId) {
+      return `${opponentId.substring(0, 8)}...`;
+    }
+    return "Player 2";
+  };
+
   return (
     <div className={styles.container}>
       {/* Only show join link for private rooms (when playing with friend) */}
@@ -127,6 +152,11 @@ const PlayerTwo = ({ result }) => {
           alt="scissors_right_hand_img"
           className={styles.scissors_right_hand_img}
         />
+      )}
+      {room.player2 && (
+        <div className={styles.player_name}>
+          {getOpponentName()}
+        </div>
       )}
     </div>
   );

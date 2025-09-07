@@ -41,6 +41,22 @@ const PlayerOne = ({ result }) => {
     }
   }, [room.players, playerChainId]);
 
+  // Get player name
+  const getPlayerName = () => {
+    // Check if the current player is player1 or player2 and return the appropriate name
+    if (room.player1 === playerChainId && room.player1Name) {
+      return room.player1Name;
+    } else if (room.player2 === playerChainId && room.player2Name) {
+      return room.player2Name;
+    }
+    
+    // Fallback to shortened chain ID if name is not available
+    if (playerChainId) {
+      return `${playerChainId.substring(0, 8)}...`;
+    }
+    return "Player 1";
+  };
+
   return (
     <div className={styles.container}>
       <div className={styles.player_info}>
@@ -82,6 +98,9 @@ const PlayerOne = ({ result }) => {
           className={styles.scissors_left_hand_img}
         />
       )}
+      <div className={styles.player_name}>
+        {getPlayerName()}
+      </div>
     </div>
   );
 };

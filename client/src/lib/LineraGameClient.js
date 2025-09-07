@@ -1,7 +1,7 @@
 // Linera GraphQL client for Rock Paper Scissors game
 // Constants as specified
 const BASE_URL = "http://localhost:8080";
-const APP_ID = "401d0f9b31676a518f661046ed91cbc152684093545303fa17890a880bca1efc";
+const APP_ID = "e8759735b75dfbadd17bc088389d7bd446ca4a6b06062f833acfcfcb0f5c3c74";
 const READ_CHAIN_ID = "47578fd433d92356466706f80498aa23645285282b27c9a03f8cc7598dc32021";
 const OWNER_ACCOUNT = "0xba11203dfaa533e31d761cf71f83b2e9950d7a2ba157f0609037ef2f7432376a";
 
@@ -323,6 +323,8 @@ class LineraGameClient {
               player2
               player1Choice
               player2Choice
+              player1Name
+              player2Name
               gameResult {
                 player1Wins
                 player2Wins
@@ -698,6 +700,15 @@ class LineraGameClient {
 
     getReadChainEndpoint() {
         return `${BASE_URL}/chains/${READ_CHAIN_ID}/applications/${APP_ID}`;
+    }
+
+    // Method to set player chain ID directly (for login scenarios)
+    setPlayerChainId(chainId) {
+        if (chainId) {
+            this.playerChainId = chainId;
+            this.isInitialized = true;
+            console.log('Player chain ID set directly:', chainId);
+        }
     }
 }
 

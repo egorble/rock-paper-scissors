@@ -3,7 +3,7 @@ import { LineraContext } from "../../context/SocketContext";
 import btn_background_img from "../../images/btn_background.png";
 import styles from "./styles.module.css";
 
-const Button = ({ name, type, onClick }) => {
+const Button = ({ name, type, onClick, className }) => {
   const { socket, navigate } = useContext(LineraContext);
 
   const handleChange = (type) => {
@@ -23,8 +23,11 @@ const Button = ({ name, type, onClick }) => {
     });
   };
 
+  // Combine the default button class with any additional classes
+  const buttonClass = className ? `${styles.btn} ${className}` : styles.btn;
+
   return (
-    <button className={styles.btn} onClick={() => handleChange(type)}>
+    <button className={buttonClass} onClick={() => handleChange(type)}>
       <img
         src={btn_background_img}
         alt="btn_background_img"
